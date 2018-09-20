@@ -1,0 +1,70 @@
+library(shiny)
+library(stringr)
+library(dplyr)
+
+load(file = "Z:\\Camila Silva\\POC\\enron_training.Rdata")
+class_mails$Date <- as.POSIXct(class_mails$Date)
+
+ui <- fluidPage(
+  titlePanel("Camilita hist!"),
+   sidebarLayout(
+     sidebarPanel(
+       selectInput(inputId= "User", 
+                   label= "Select User", 
+                   choices=(class_mails$From) %>% unique(),
+                    selected="christian.yoder@enron.com"), 
+       
+       selectInput(inputId= "range", 
+                  label= "Range", 
+                  choices=c("Among Year", "Among Month", 
+                            "Among Week", "Among Day"),
+                  selected="Among Year") 
+      ,width =4),
+    mainPanel(
+      plotOutput(outputId = "distPlott"),
+      width = 8
+    )  ) )
+server <- function(input, output) {
+  output$distPlott <- renderPlot({
+    filter_mail <- class_mails %>% filter(From==input$User)
+    #filter_mail <- class_mails %>% filter(From=="christian.yoder@enron.com")
+    filter_mail$Month_Name <- month.abb[filter_mail$Month]
+    if(input$range=="Among Year"){    
+      x    <- filter_mail$Month_Name %>% ordered(levels=c("Jan","Feb","Mar",
+             "Apr","May","Jun","Jul","Aug","Sep","Oct",
+             "Nov","Dec"))
+      y <- filter_mail %>% filter(is_suspiscius==1) 
+      y<- y$Month_Name %>%  ordered(levels=c("Jan","Feb","Mar",
+                                 "Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+                                 
+      }
+    if(input$range=="Among Month"){
+      x    <- filter_mail$Day %>% ordered(levels=seq(max(31)))
+      y    <- filter_mail %>% filter(is_suspiscius==1)
+      y   <- y$Day  %>%   ordered(levels=seq(max(31)))}
+    
+    if(input$range=="Among Week"){
+      x <- filter_mail$Weekday %>% ordered(levels=c("Monday", "Tuesday", 
+                                                    "Wednesday", "Thursday", 
+                                              "Friday", "Saturday", "Sunday"))
+      y <- filter_mail %>% filter(is_suspiscius==1) 
+      y <- y$Weekday %>%  ordered(levels=c("Monday", "Tuesday", 
+                                                    "Wednesday", "Thursday", 
+                                                    "Friday", "Saturday", "Sunday"))}
+    if(input$range=="Among Day"){
+      x <- filter_mail$Hour %>% ordered(levels=seq(max(24)))      
+      y <-  filter_mail %>% filter(is_suspiscius==1) %>% 
+      y <- y$Hour %>%    ordered(levels=seq(max(24)))
+    }
+   
+    #barplot(height=table(y),
+    #      #col = "#75AADB",
+    #      border = "white",
+    #      xlab = input$range %>% str_sub( start = 7, end = -1))
+    
+    barplot(height=table(x),
+           col = "#75AADB",
+          border = "white",
+         xlab = input$range %>% str_sub( start = 7, end = -1))
+  })}
+shinyApp(ui, server)
